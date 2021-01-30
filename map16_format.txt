@@ -1,0 +1,27 @@
+LM Info 16 bytes (includes LM version)
+4C4D3136000101002103010000000000
+End of Header offset - 4 bytes
+Comment Offset - 4 bytes
+Width - 4 bytes
+Height - 4 bytes
+X - 4 bytes
+Y - 4 bytes
+??? - 4 bytes (flags, safe to be 0)
+unused - 20 byte
+comment - Lunar Magic 3.21  ©2020 FuSoYa  Defender of Relm°
+
+End of Header offset points here
+
+Tile Data Offset - 4 bytes
+Tile Data Size   - 4 bytes
+Act Like Offset  - 4 bytes
+Act Like Size    - 4 bytes
+unused?		 - 48 bytes (0s in non full export)
+
+Tile Data - 8 bytes per
+	4 sets of 2 byte pairs
+	8x8 Tile number and Properties
+
+On a full export, the first 2 pages will be 0 0 0 0 and then unused tiles afterwards will be 4 4 4 4
+
+Act Like Data - 2 bytes per, just map16 number
