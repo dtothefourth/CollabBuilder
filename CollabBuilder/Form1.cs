@@ -1865,11 +1865,28 @@ namespace CollabBuilder
             return (1.0 - ((double)stepsToSame / (double)Math.Max(source.Length, target.Length)));
         }
 
+        string FileToString(string path)
+        {
+            BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open));
+            byte[] data = reader.ReadBytes((int)reader.BaseStream.Length);
+            reader.Close();
+            return System.Text.Encoding.UTF8.GetString(data, 0, data.Length);
+        }
+
+        double CompareFiles(string path, string path2)
+        {
+            string data, data2;
+
+            data = FileToString(path);
+            data2 = FileToString(path2);
+
+            return CalculateSimilarity(data, data2);
+        }
+
         private void button1_Click(object sender, EventArgs e)
         {
 
-            GetAllSongData();
-
+ 
             for (int i = 0; i < 4096; i++) SharedGFX[i] = 0;
 
             OpenFileDialog dialog = new OpenFileDialog()
@@ -3816,8 +3833,14 @@ namespace CollabBuilder
                             File.Delete(dir + "\\ 104.mwl");
                     }
 
-                        string dest, file;
+                    string dest, file;
                     var list = Directory.GetFiles(dir, "*.mwl");
+
+                    for (int i = 1; i < list.Count(); i++)
+                    {
+                        double a = CompareFiles(list[i], "Test.mwl");
+                    }
+
 
                     if (list.Count() > 1)
                     {
@@ -4172,333 +4195,6 @@ namespace CollabBuilder
                 return -1;
             }
             return -1;
-        }
-
-        int GetSongData(string song, int subsong, MySqlConnection connection)
-        {
-            String wd = Directory.GetCurrentDirectory();
-
-            if (!Directory.Exists(wd + "\\AddMusick"))
-            {
-                MessageBox.Show("AddMusick folder missing from Collab Builder directory.");
-                return -1;
-            }
-
-            if (!File.Exists(song)) return -1;
-
-            int slot = 0;
-            string file = Path.GetFileName(song);
-            string sub = Directory.GetParent(song).FullName;
-            string dir = Path.GetFileName(sub);
-
-            try
-            {
-                if (Directory.Exists(wd + "\\AddMusick\\music"))
-                    Directory.Delete(wd + "\\AddMusick\\music", true);
-                if (Directory.Exists(wd + "\\AddMusick\\samples"))
-                    Directory.Delete(wd + "\\AddMusick\\samples", true);
-
-                CopyDirectory(wd + "\\AddMusick\\musicbase", wd + "\\AddMusick\\music");
-                CopyDirectory(wd + "\\AddMusick\\samplesbase", wd + "\\AddMusick\\samples");
-
-
-                File.Copy(song, wd + "\\AddMusick\\music\\" + file);
-
-                if (Directory.Exists(sub + "\\__MACOSX"))
-                {
-                    Directory.Delete(sub + "\\__MACOSX",true);
-                }
-
-                foreach (var folder in Directory.GetDirectories(sub))
-                {
-
-                    string f = Path.GetFileName(folder);
-
-                    CopyDirectory(folder, wd + "\\AddMusick\\samples\\" + f);
-                }
-
-                foreach (var sample in Directory.GetFiles(sub, "*.brr"))
-                {
-                    File.Copy(sample, wd + "\\AddMusick\\samples\\" + Path.GetFileName(sample));
-                }
-
-                if(Directory.Exists(sub + "\\samples"))
-                {
-                    CopyDirectory(sub + "\\samples", wd + "\\AddMusick\\samples\\");
-                }
-                if (Directory.Exists(sub + "\\brr"))
-                {
-                    CopyDirectory(sub + "\\brr", wd + "\\AddMusick\\samples\\");
-                }
-                if (Directory.Exists(sub + "\\brrs"))
-                {
-                    CopyDirectory(sub + "\\brrs", wd + "\\AddMusick\\samples\\");
-                }
-
-                
-
-                if (File.Exists(wd + "\\AddMusick\\Addmusic_list.txt"))
-                    File.Delete(wd + "\\AddMusick\\Addmusic_list.txt");
-
-                if (File.Exists(wd + "\\AddMusick\\Addmusic_sample groups.txt"))
-                    File.Delete(wd + "\\AddMusick\\Addmusic_sample groups.txt");
-
-                File.Copy(wd + "\\AddMusick\\sample groups.txt", wd + "\\AddMusick\\Addmusic_sample groups.txt");
-
-                StreamWriter writer = new StreamWriter(wd + "\\AddMusick\\Addmusic_list.txt");
-                writer.WriteLine("Locals:");
-                writer.WriteLine("0A  " + file);
-                writer.Close();
-
-                foreach (var tfile in Directory.GetFiles(sub, "*.txt"))
-                {
-                    bool go = false;
-                    if (tfile.ToLower().Contains("samplegroup")) go = true;
-                    if (tfile.ToLower().Contains("sample group")) go = true;
-                    if (tfile.ToLower().Contains("sample_group")) go = true;
-                    if (tfile.ToLower().Contains("samples group")) go = true;
-
-                    StreamReader text = new StreamReader(tfile);
-                    string line = null;
-
-                    if(!go)
-                    if (tfile.ToLower().Contains("read me") || tfile.ToLower().Contains("read_me") || tfile.ToLower().Contains("readme")) {
-                        line = text.ReadLine();
-                        if (line == null)
-                        {
-                            text.Close();
-                            continue;
-                        }
-                        
-                        line = line.Trim();
-                        if (line.StartsWith("#")) go = true;
-                    }
-
-                    if (!go)
-                    {
-                        text.Close();
-                        continue;
-                    }
-                    StreamWriter twriter = File.AppendText(wd + "\\AddMusick\\Addmusic_sample groups.txt");
-
-                    
-                    twriter.WriteLine("");
-                    if (line!=null && !line.StartsWith(";"))twriter.WriteLine(line);
-
-                    while ((line = text.ReadLine()) != null)
-                    {
-                        line = line.Trim();
-                        if (line.StartsWith(";")) continue;
-                        twriter.WriteLine(line);
-                    }
-                    text.Close();
-                    twriter.Close();
-                }
-
-                if (File.Exists(wd + "\\AddMusick\\Dummy.smc"))
-                    File.Delete(wd + "\\AddMusick\\Dummy.smc");
-
-                File.Copy(wd + "\\AddMusick\\Base.smc", wd + "\\AddMusick\\Dummy.smc");
-
-                System.Diagnostics.ProcessStartInfo pi = new System.Diagnostics.ProcessStartInfo();
-
-                pi.FileName = wd + "\\AddMusick\\_Add.bat";
-                pi.WorkingDirectory = wd + "\\AddMusick\\";
-                pi.UseShellExecute = false;
-                pi.RedirectStandardOutput = true;
-                pi.CreateNoWindow = true;
-
-                Process p = System.Diagnostics.Process.Start(pi);
-                //string output = p.StandardOutput.ReadToEnd();
-                p.WaitForExit(5000);
-                if (p.HasExited == false)
-                {
-                    p.Kill();
-                    return -1;
-                }
-                
-
-                BinaryReader creader = new BinaryReader(File.Open(wd + "\\AddMusick\\Dummy.smc", FileMode.Open, FileAccess.Read, FileShare.Read));
-                uint co = 0, cdato = 0;
-                co = SNESToPC(HasHeader(wd + "\\AddMusick\\Dummy.smc"), false, 0xE8000);
-
-                creader.BaseStream.Seek(co + 8, SeekOrigin.Begin);
-                co = creader.ReadUInt32();
-                co &= 0x00FFFFFF;
-
-                co = SNESToPC(HasHeader(wd + "\\AddMusick\\Dummy.smc"), false, co);
-                creader.BaseStream.Seek(co + 30, SeekOrigin.Begin);
-                cdato = creader.ReadUInt32();
-                cdato &= 0x00FFFFFF;
-                cdato = SNESToPC(HasHeader(wd + "\\AddMusick\\Dummy.smc"), false, cdato);
-                
-                creader.BaseStream.Seek(cdato, SeekOrigin.Begin);
-                ushort csize = creader.ReadUInt16();
-
-                ushort size = csize;
-                string data = "";
-                string item = "";
-                string name = Path.GetFileNameWithoutExtension(file);
-
-                string URL = "";
-
-                if (File.Exists(sub + "\\Link.dat"))
-                {
-                    StreamReader text = new StreamReader(sub + "\\Link.dat");
-                    URL = text.ReadLine();
-                    text.Close();
-                }
-                for (ushort i = 0; i < 24; i++)
-                {
-                    creader.ReadByte();
-                    csize--;
-                }
-
-                for (ushort i = 0; i < csize; i++)
-                {
-                    byte b, cb;
-
-                    cb = creader.ReadByte();
-
-                    item = cb.ToString("X");
-                    if (item.Length < 2) item = "0" + item;
-                    data += item;
-                }              
-                 
-                creader.Close();
-
-                string l = data.Substring(0, 6);
-                string l2 = data.Substring(0, 12);
-                string r = data.Substring(data.Length - 6, 6);
-
-                string sql = "INSERT INTO songs(ID, Size, Data, URL, Name, Sub, DataLeft, DataRight, DataLeftLong) VALUES(@param1,@param2,@param3,@param4,@param5,@param6,@param7,@param8,@param9)";
-                using (MySqlCommand cmd = new MySqlCommand(sql, connection))
-                {
-                    cmd.Parameters.AddWithValue("@param1", uint.Parse(dir));
-                    cmd.Parameters.AddWithValue("@param2", size);
-                    cmd.Parameters.AddWithValue("@param3", data);
-                    cmd.Parameters.AddWithValue("@param4", URL);
-                    cmd.Parameters.AddWithValue("@param5", name);
-                    cmd.Parameters.AddWithValue("@param6", subsong);
-                    cmd.Parameters.AddWithValue("@param7", l);
-                    cmd.Parameters.AddWithValue("@param8", r);
-                    cmd.Parameters.AddWithValue("@param9", l2);
-                    cmd.ExecuteNonQuery();
-                }
-
-                return 1;
-            }
-
-
-            catch (Exception e)
-            {
-                if (e.Message.Contains("Duplicate entry")) return 1;
-                if (e.Message.Contains("Object reference not set")) return -2;
-                return -1;
-            }
-            return -1;
-        }
-
-
-        void GetAllSongData()
-        {
-            MySqlConnection connection = new MySqlConnection("Server=192.168.1.5,3306;Database=SMW_Music;User Id=blindkaizorace_db;Password=IRm6tQl.jZls;");
-
-            connection.Open();
-
-            foreach (var folder in Directory.GetDirectories("C:\\Users\\Justin\\Downloads\\New folder\\New folder\\"))
-            {
-                bool del = true;
-                int s = 0;
-
-                if(Directory.Exists(folder + "\\TXTs"))
-                {
-                    foreach (var file in Directory.GetFiles(folder + "\\TXTs", "*.*"))
-                    {
-                        File.Move(file, folder + "\\" + Path.GetFileName(file));
-                    }
-
-                    foreach (var subsub in Directory.GetDirectories(folder + "\\TXTs"))
-                    {
-                        CopyDirectory(subsub, folder + "\\" + Path.GetFileName(subsub));
-                        Directory.Delete(subsub, true);
-                    }
-
-                    try
-                    {
-                        Directory.Delete(folder + "\\TXTs");
-                    }
-                    catch (Exception e)
-                    {
-
-                    }
-                }
-
-                foreach (var file in Directory.GetFiles(folder, "*.txt"))
-                {
-                    if (file.ToLower().Contains("readme")) continue;
-                    if (file.ToLower().Contains("read me")) continue;
-                    if (file.ToLower().Contains("read_me")) continue;
-                    if (file.ToLower().Contains("samples group")) continue;
-                    if (file.ToLower().Contains("sample group")) continue;
-                    if (file.ToLower().Contains("sample_group")) continue;
-                    if (file.ToLower().Contains("samplegroup")) continue;
-                    if (Path.GetFileName(file).ToLower() == "info.txt") continue;
-                    if (Path.GetFileName(file).ToLower() == "blist.txt") continue;
-                    int succ = GetSongData(file,s,connection);
-                    if(succ == -2) succ = GetSongData(file, s,connection);
-
-                    if (succ == -1) del = false;
-                    s++;
-                }
-
-                if(s == 0)
-                {
-                    foreach (var sub in Directory.GetDirectories(folder))
-                    {
-                        foreach (var file in Directory.GetFiles(sub, "*.*"))
-                        {
-                            File.Move(file, folder + "\\" + Path.GetFileName(file));
-                        }
-
-                        foreach (var subsub in Directory.GetDirectories(sub))
-                        {
-                            CopyDirectory(subsub, folder + "\\" + Path.GetFileName(subsub));
-                            Directory.Delete(subsub, true);
-                        }
-
-                        try
-                        {
-                            Directory.Delete(sub);
-                        } catch(Exception e)
-                        {
-
-                        }
-                    }
-
-                    foreach (var file in Directory.GetFiles(folder, "*.txt"))
-                    {
-                        if (file.ToLower().Contains("readme")) continue;
-                        if (file.ToLower().Contains("read me")) continue;
-                        if (file.ToLower().Contains("read_me")) continue;
-                        if (file.ToLower().Contains("sample group")) continue;
-                        if (file.ToLower().Contains("sample_group")) continue;
-                        if (file.ToLower().Contains("samples group")) continue;
-                        if (file.ToLower().Contains("samplegroup")) continue;
-                        if (Path.GetFileName(file).ToLower() == "info.txt") continue;
-                        if (Path.GetFileName(file).ToLower() == "blist.txt") continue;
-                        int succ = GetSongData(file, s, connection);
-                        if (succ == -2) succ = GetSongData(file, s, connection);
-                        if (succ == -1) del = false;
-                        s++;
-                    }
-
-                    if (s == 0) del = false;
-                }
-
-                if (del) Directory.Delete(folder, true);
-            }
-            connection.Close();
         }
 
     }
