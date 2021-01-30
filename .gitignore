@@ -1,0 +1,7 @@
+CollabBuilder/bin/
+CollabBuilder/obj/
+CollabBuilder/.vs/
+packages/
+.vs/
+.vs
+*.ide
