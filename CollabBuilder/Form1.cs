@@ -13,6 +13,8 @@ using System.Windows.Forms;
 using System.IO.Compression;
 using System.Data.SqlClient;
 using MySql.Data.MySqlClient;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CollabBuilder
 {
@@ -86,43 +88,63 @@ namespace CollabBuilder
             return uber;
         }
 
+        private class JsonSprite {
+            [JsonInclude, JsonPropertyName("Additional Byte Count (extra bit clear)")]
+            public int addbcountclear;
+
+            [JsonInclude, JsonPropertyName("Additional Byte Count (extra bit set)")]
+            public int addbcountset;
+
+            [JsonInclude, JsonPropertyName("AsmFile")]
+            public string asmfile;
+        }
+
         private void GetSpriteBytes(string file, ref byte e1, ref byte e2)
         {
 
-            //HANDLE JSON
-
-            string line = "";
-            string[] words;
-            if (!File.Exists(file))
-            {
+            if (!File.Exists(file)) {
                 return;
             }
-
-            StreamReader text = new StreamReader(file);
-
-            for (int i = 0; i < 6; i++)
+            string ext = Path.GetExtension(file).ToLower();
+            if (ext == ".json") 
             {
-                line = text.ReadLine();
-                if (line == null) return;
-            }
-            words = line.Split(':');
-
-            if (words.Length < 2) return;
-
-            words[0] = Regex.Replace(words[0], @"\s+", " ");
-            words[0].Trim();
-            if (words[0] != "") {
-                e1 = byte.Parse(words[0], System.Globalization.NumberStyles.HexNumber);
-            }
-
-            words[1] = Regex.Replace(words[1], @"\s+", " ");
-            words[1].Trim();
-            if (words[1] != "")
+                var options = new JsonSerializerOptions() {
+                    IncludeFields = true
+                };
+                var jsonSpan = new ReadOnlySpan<byte>(File.ReadAllBytes(file));
+                JsonSprite spr = JsonSerializer.Deserialize<JsonSprite>(jsonSpan, options);
+                e1 = (byte)spr.addbcountclear;
+                e2 = (byte)spr.addbcountset;
+            } 
+            else if (ext == ".cfg") 
             {
-                e2 = byte.Parse(words[1], System.Globalization.NumberStyles.HexNumber);
-            }
+                string line = "";
+                string[] words;
 
-            text.Close();
+                StreamReader text = new StreamReader(file);
+
+                for (int i = 0; i < 6; i++) {
+                    line = text.ReadLine();
+                    if (line == null) return;
+                }
+                words = line.Split(':');
+
+                if (words.Length < 2) return;
+
+                words[0] = Regex.Replace(words[0], @"\s+", " ");
+                words[0].Trim();
+                if (words[0] != "") {
+                    e1 = byte.Parse(words[0], System.Globalization.NumberStyles.HexNumber);
+                }
+
+                words[1] = Regex.Replace(words[1], @"\s+", " ");
+                words[1].Trim();
+                if (words[1] != "") {
+                    e2 = byte.Parse(words[1], System.Globalization.NumberStyles.HexNumber);
+                }
+
+                text.Close();
+            }
         }
 
         private string GetMWLLevel(string path)
@@ -1868,7 +1890,7 @@ namespace CollabBuilder
         private void button1_Click(object sender, EventArgs e)
         {
 
-            GetAllSongData();
+            // GetAllSongData();
 
             for (int i = 0; i < 4096; i++) SharedGFX[i] = 0;
 
@@ -2509,12 +2531,26 @@ namespace CollabBuilder
                         temp = path + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + Sprites.Rows[i].Cells[4].Value.ToString();
                         File.Copy(input + level + "\\Sprites\\" + Sprites.Rows[i].Cells[4].Value.ToString(), temp, true);
 
-                        StreamReader cfg = new StreamReader(temp);
-                        cfg.ReadLine();
-                        cfg.ReadLine();
-                        cfg.ReadLine();
-                        cfg.ReadLine();
-                        temp2 = cfg.ReadLine();
+                        string ext = Path.GetExtension(temp).ToLower();
+
+                        if (ext == ".cfg") {
+                            StreamReader cfg = new StreamReader(temp);
+                            cfg.ReadLine();
+                            cfg.ReadLine();
+                            cfg.ReadLine();
+                            cfg.ReadLine();
+                            temp2 = cfg.ReadLine();
+                            cfg.Close();
+                        } else if (ext == ".json") {
+                            var options = new JsonSerializerOptions() {
+                                IncludeFields = true
+                            };
+                            var jsonSpan = new ReadOnlySpan<byte>(File.ReadAllBytes(temp));
+                            JsonSprite spr = JsonSerializer.Deserialize<JsonSprite>(jsonSpan, options);
+                            temp2 = spr.asmfile;
+                        } else {
+                            temp2 = "";
+                        }
 
                         temp = path + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + temp2;
                         File.Copy(input + level + "\\Sprites\\" + temp2, temp, true);
@@ -2525,12 +2561,26 @@ namespace CollabBuilder
                         temp = path + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + Sprites.Rows[i].Cells[4].Value.ToString();
                         File.Copy(input + level + "\\Sprites\\" + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + Sprites.Rows[i].Cells[4].Value.ToString(), temp, true);
 
-                        StreamReader cfg = new StreamReader(temp);
-                        cfg.ReadLine();
-                        cfg.ReadLine();
-                        cfg.ReadLine();
-                        cfg.ReadLine();
-                        temp2 = cfg.ReadLine();
+                        string ext = Path.GetExtension(temp).ToLower();
+
+                        if (ext == ".cfg") {
+                            StreamReader cfg = new StreamReader(temp);
+                            cfg.ReadLine();
+                            cfg.ReadLine();
+                            cfg.ReadLine();
+                            cfg.ReadLine();
+                            temp2 = cfg.ReadLine();
+                            cfg.Close();
+                        } else if (ext == ".json") {
+                            var options = new JsonSerializerOptions() {
+                                IncludeFields = true
+                            };
+                            var jsonSpan = new ReadOnlySpan<byte>(File.ReadAllBytes(temp));
+                            JsonSprite spr = JsonSerializer.Deserialize<JsonSprite>(jsonSpan, options);
+                            temp2 = spr.asmfile;
+                        } else {
+                            temp2 = "";
+                        }
 
                         temp = path + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + temp2;
                         File.Copy(input + level + "\\Sprites\\" + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + temp2, temp, true);
