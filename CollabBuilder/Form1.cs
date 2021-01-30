@@ -2532,6 +2532,7 @@ namespace CollabBuilder
                         cfg.ReadLine();
                         cfg.ReadLine();
                         temp2 = cfg.ReadLine();
+                        cfg.Close();
 
                         temp = path + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + temp2;
                         File.Copy(input + level + "\\Sprites\\" + temp2, temp, true);
@@ -2547,6 +2548,7 @@ namespace CollabBuilder
                         cfg.ReadLine();
                         cfg.ReadLine();
                         cfg.ReadLine();
+                        cfg.Close();
                         temp2 = cfg.ReadLine();
 
                         temp = path + Sprites.Rows[i].Cells[1].Value.ToString() + "\\" + temp2;
@@ -3838,10 +3840,14 @@ namespace CollabBuilder
 
                     for (int i = 1; i < list.Count(); i++)
                     {
-                        double a = CompareFiles(list[i], "Test.mwl");
+                        double sim = CompareFiles(list[i], "Test.mwl");
+                        if (sim > 0.97)
+                        {
+                            File.Delete(list[i]);
+                        }
                     }
 
-
+                    list = Directory.GetFiles(dir, "*.mwl");
                     if (list.Count() > 1)
                     {
                         if (!Directory.Exists(dir + "\\Sublevels"))
